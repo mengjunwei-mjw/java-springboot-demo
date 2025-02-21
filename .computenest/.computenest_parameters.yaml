@@ -1,0 +1,14 @@
+SecurityGroupPorts:
+- 80
+RuntimeType: Container
+ServicePorts:
+- 80
+ServiceType: private
+ArtifactSourceType: Buildpacks
+ServiceBuildRegion: ap-southeast-1
+RepoName: mengjunwei-mjw/java-springboot-demo
+RegionId: cn-hangzhou
+CustomParameters: ''
+Owner: mengjunwei-mjw
+Branch: main
+Platform: github

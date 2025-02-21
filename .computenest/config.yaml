@@ -1,0 +1,69 @@
+Service:
+  RegionId: cn-hangzhou
+  DeployType: ros
+  OperationMetadata:
+    StatusOperationConfigs:
+      - TemplateName: ECS单机版
+        SupportOperations:
+          - Start
+          - Stop
+          - Restart
+    SupportBackup: true
+    ModifyParametersConfig:
+      - TemplateName: ECS单机版
+        Operation:
+          - Name: 变更ECS实例规格
+            Description: 变更ECS实例规格
+            Type: Custom
+            Parameters:
+              - EcsInstanceType
+          - Name: 变更ECS实例密码
+            Description: 变更ECS实例密码
+            Type: Custom
+            Parameters:
+              - InstancePassword
+  DeployMetadata:
+    SupplierDeployMetadata:
+      SupplierTemplateConfigs:
+        - Name: ECS单机版
+          Url: 'ros_templates/template.yaml'
+          ArchitectureDiagramUrl: 'resources/architecture/architecture.jpg'
+          AllowedRegions:
+            - ap-southeast-1
+      ArtifactRelation:
+        ecs_image_java-springboot-demo:
+          ArtifactId: ${Artifact.EcsImage.ArtifactId}
+          ArtifactVersion: draft
+    TemplateConfigs:
+      - Name: ECS单机版
+        Url: 'ros_templates/template.yaml'
+        ArchitectureDiagramUrl: 'resources/architecture/architecture.jpg'
+        AllowedRegions:
+          - ap-southeast-1
+  ServiceType: private
+  ServiceInfo:
+    # 英文版可以再配置Locale为en-US的服务信息
+    - Locale: zh-CN
+      ShortDescription: demo
+      Image: 'resources/icons/service_logo.png'
+Artifact:
+  EcsImage:
+    ArtifactType: EcsImage
+    ArtifactName: ecs_image_java-springboot-demo
+    Description: java-springboot-demo EcsImage
+    SupportRegionIds:
+        - ap-southeast-1
+    ArtifactBuildProperty:
+      CodeRepo:
+        Platform: github
+        Owner: mengjunwei-mjw
+        RepoName: mengjunwei-mjw/java-springboot-demo
+        Branch: main
+      RegionId: ap-southeast-1
+      CommandType: RunShellScript
+      CommandContent: |-
+        curl -L https://github.com/buildpacks/pack/releases/download/v0.36.4/pack-v0.36.4-linux.tgz -o /tmp/pack.tgz
+        tar xvzf /tmp/pack.tgz -C /tmp
+        /tmp/pack build mengjunwei-mjw/java-springboot-demo --path . --builder heroku/builder:24 2>&1 | stdbuf -oL grep -viE 'Downloading|sha256|extracting|KiB|Downloaded'  || exit 1
+        rm -f /tmp/pack.tgz /tmp/pack
+        docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}' | grep -v '^mengjunwei-mjw/java-springboot-demo:' | awk '{print $2}' | xargs docker rmi;
