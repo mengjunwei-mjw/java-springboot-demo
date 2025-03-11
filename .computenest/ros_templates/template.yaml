@@ -125,7 +125,6 @@ Parameters:
     AssociationProperty: ALIYUN::ECS::Instance::InstanceType
     AssociationPropertyMetadata:
       InstanceChargeType: ${PayType}
-      ZoneId: ${ZoneId}
       Constraints:
         InstanceTypeFamily:
           - ecs.u1
@@ -180,16 +179,16 @@ Parameters:
     Label:
       en: VSwitch ID
       zh-cn: 交换机实例ID
-    Default: ''
     AssociationProperty: 'ALIYUN::ECS::VSwitch::VSwitchId'
     Required:
       Fn::Equals:
         - ExistingVPC
         - ${VpcOption}
+    Default: ''
     AssociationPropertyMetadata:
       AutoSelectFirst: true
-      VpcId: ${VpcId}
-      ZoneId: ${ZoneId}
+      VpcId: VpcId
+      ZoneId: ZoneId
       Visible:
         Condition:
           Fn::Equals:
@@ -273,50 +272,35 @@ Resources:
     Properties:
       InstanceIds:
         Fn::GetAtt:
-          - InstanceGroup
-          - InstanceIds
+        - InstanceGroup
+        - InstanceIds
       Type: RunShellScript
       Sync: true
       Timeout: 3600
-      CommandContent: |-
-        #!/bin/bash
-        cat > /root/java-springboot-demo.env << "EOF"
-        PORT=80
-        EOF
+      CommandContent:
+        Fn::Sub:
+          - |
+            #!/bin/bash
+            cd /root/application
+            echo "start run command"
 
-        CONTAINER_NAME="java-springboot-demo"
-        TEMP_IMAGE_NAME="java-springboot-demo-new"
-        if [ "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
-            # 检查容器是否在运行
-            if [ "$(docker inspect -f{{.State.Running}} $CONTAINER_NAME)" = "true" ]; then
-                # 将原容器内数据打包成新镜像
-                docker commit $CONTAINER_NAME $TEMP_IMAGE_NAME
-                # 停止容器
-                docker stop $CONTAINER_NAME
-                # 删除重名容器
-                docker rm $CONTAINER_NAME
-                # 重新启动容器，使用新创建的镜像
-                docker run -d -p 80:80 --env-file=/root/java-springboot-demo.env --name $CONTAINER_NAME $TEMP_IMAGE_NAME
-            else
-                docker run -d -p 80:80 --env-file=/root/java-springboot-demo.env --name $CONTAINER_NAME mengjunwei-mjw/java-springboot-demo
-            fi
-        else
-            docker run -d -p 80:80 --env-file=/root/java-springboot-demo.env --name $CONTAINER_NAME mengjunwei-mjw/java-springboot-demo
-        fi
+            ARGUS_VERSION=3.5.7 /bin/bash -c "$(curl -sS https://cms-agent-${RegionId}.oss-${RegionId}-internal.aliyuncs.com/Argus/agent_install_ecs-1.7.sh)" >> /root/install_cms_agent.log 2>&1
+          - RegionId:
+              Ref: ALIYUN::Region
 Outputs:
-  ServerAddress1:
+  ServerAddress:
     Description:
-      en: ServerAddress1
-      zh-cn: 访问页面1
+      en: ServerAddress.
+      zh-cn: 访问页面。
     Value:
       Fn::Sub:
         - http://${ServerAddress}:80
         - ServerAddress:
             Fn::Select:
-              - 0
-              - Fn::GetAtt:
-                - InstanceGroup
-                - PublicIps
+            - 0
+            - Fn::GetAtt:
+              - InstanceGroup
+              - PublicIps
 Metadata:
   ALIYUN::ROS::Interface:
     ParameterGroups:

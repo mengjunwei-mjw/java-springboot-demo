@@ -1,12 +1,17 @@
+RepoName: mengjunwei-mjw/java-springboot-demo
+RunCommand: |
+  echo "start run command"
+SourceCodePath: .
+CommandTimeout: 3600
 SecurityGroupPorts:
 - 80
-RuntimeType: Container
+RuntimeType: LinuxShell
 ServicePorts:
 - 80
 ServiceType: private
-ArtifactSourceType: Buildpacks
+ArtifactSourceType: SourceCode
+ImageId: '"{{resolve:oos:aliyun/services/ecs/images/linux/ubuntu-latest/ubuntu_22_04_x64}}"'
 ServiceBuildRegion: ap-southeast-1
-RepoName: mengjunwei-mjw/java-springboot-demo
 RegionId: cn-hangzhou
 CustomParameters: ''
 Owner: mengjunwei-mjw
