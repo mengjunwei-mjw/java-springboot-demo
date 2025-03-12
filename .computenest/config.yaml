@@ -61,7 +61,9 @@ Artifact:
         Branch: main
       RegionId: ap-southeast-1
       CommandType: RunShellScript
-      SourceImageId: aliyun/services/ecs/images/linux/ubuntu-latest/ubuntu_22_04_x64
       CommandContent: |-
-        mkdir -p /root/application
-        cp -r /root/code/./* /root/application/;
+        curl -L https://github.com/buildpacks/pack/releases/download/v0.36.4/pack-v0.36.4-linux.tgz -o /tmp/pack.tgz
+        tar xvzf /tmp/pack.tgz -C /tmp
+        /tmp/pack build mengjunwei-mjw/java-springboot-demo --path . --builder heroku/builder:24 2>&1 | stdbuf -oL grep -viE 'Downloading|sha256|extracting|KiB|Downloaded'  || exit 1
+        rm -f /tmp/pack.tgz /tmp/pack
+        docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}' | grep -v '^mengjunwei-mjw/java-springboot-demo:' | awk '{print $2}' | xargs docker rmi;
