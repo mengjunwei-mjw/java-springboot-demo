@@ -229,7 +229,7 @@ Resources:
           - Ref: EcsVpc
           - Ref: VpcId
       SecurityGroupIngress:
-        - PortRange: 80/80
+        - PortRange: 8080/8080
           Priority: 1
           SourceCidrIp: 0.0.0.0/0
           IpProtocol: tcp
@@ -281,7 +281,7 @@ Resources:
       CommandContent: |-
         #!/bin/bash
         cat > /root/java-springboot-demo.env << "EOF"
-        PORT=80
+        PORT=8080
         EOF
 
         CONTAINER_NAME="java-springboot-demo"
@@ -296,13 +296,54 @@ Resources:
                 # 删除重名容器
                 docker rm $CONTAINER_NAME
                 # 重新启动容器，使用新创建的镜像
-                docker run -d -p 80:80 --env-file=/root/java-springboot-demo.env --name $CONTAINER_NAME $TEMP_IMAGE_NAME
+                docker run -d -p 8080:8080 --env-file=/root/java-springboot-demo.env --name $CONTAINER_NAME $TEMP_IMAGE_NAME
             else
-                docker run -d -p 80:80 --env-file=/root/java-springboot-demo.env --name $CONTAINER_NAME mengjunwei-mjw/java-springboot-demo
+                docker run -d -p 8080:8080 --env-file=/root/java-springboot-demo.env --name $CONTAINER_NAME mengjunwei-mjw/java-springboot-demo
             fi
         else
-            docker run -d -p 80:80 --env-file=/root/java-springboot-demo.env --name $CONTAINER_NAME mengjunwei-mjw/java-springboot-demo
+            docker run -d -p 8080:8080 --env-file=/root/java-springboot-demo.env --name $CONTAINER_NAME mengjunwei-mjw/java-springboot-demo
         fi
+         WAIT_TIME=0
+         MAX_WAIT_TIME=3600
+         TIMEOUT_REACHED=false
+         CHECK_INTERVAL=10
+         while [ $WAIT_TIME -le $MAX_WAIT_TIME ]; do
+             ALL_HEALTHY=true
+             CONTAINER_ID=$(docker inspect -f "{{.Id}}" "${CONTAINER_NAME}")
+             if [ -z "$CONTAINER_ID" ]; then
+                 echo "[$SERVICE] Not running"
+                 ALL_HEALTHY=false
+             fi
+             INSPECT_OUTPUT=$(docker inspect --format \
+             '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' \
+             "$CONTAINER_ID" 2>/dev/null)
+
+             STATUS=$(echo "$INSPECT_OUTPUT" | awk '{print $1}')
+             HEALTH_STATUS=$(echo "$INSPECT_OUTPUT" | awk '{print $2}')
+
+             case "$HEALTH_STATUS" in
+                "healthy") ;;
+               "unhealthy"|"starting")
+                  echo "[$SERVICE] Unhealthy: $HEALTH_STATUS"
+                  ALL_HEALTHY=false
+                 ;;
+               "no-healthcheck")
+        [ "$STATUS" != "running" ] && ALL_HEALTHY=false
+                 ;;
+                 *)
+                 ALL_HEALTHY=false
+                 ;;
+              esac
+
+             $ALL_HEALTHY && exit 0
+             [ $WAIT_TIME -ge $MAX_WAIT_TIME ] && break
+
+             sleep $CHECK_INTERVAL
+             WAIT_TIME=$((WAIT_TIME + CHECK_INTERVAL))
+        done
+
+        echo "Timeout reached! Abnormal services:" >&2
+        exit 1
 Outputs:
   ServerAddress1:
     Description:
@@ -310,7 +351,7 @@ Outputs:
       zh-cn: 访问页面1
     Value:
       Fn::Sub:
-        - http://${ServerAddress}:80
+        - http://${ServerAddress}:8080
         - ServerAddress:
             Fn::Select:
               - 0
